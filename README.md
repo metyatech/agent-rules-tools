@@ -2,6 +2,10 @@
 
 This repository contains CLI tooling for composing per-project `AGENTS.md` files from modular rule sets.
 
+## Release notes
+
+See `CHANGELOG.md` for release notes.
+
 It is intended to be used together with shared rule modules such as:
 
 - `agent-rules/` (public rule modules)
