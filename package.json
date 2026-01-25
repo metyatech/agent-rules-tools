@@ -31,7 +31,7 @@
     "lint": "tsc -p tsconfig.json --noEmit",
     "prepack": "npm run build",
     "test": "npm run build && node --test",
-    "compose": "node dist/compose-agents.js"
+    "compose": "npm run build && node dist/compose-agents.js"
   },
   "engines": {
     "node": ">=20"

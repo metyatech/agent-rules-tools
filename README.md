@@ -17,6 +17,20 @@ npm install -g compose-agentsmd
 
 This provides the `compose-agentsmd` command.
 
+## Rules setup (this repository)
+
+This repository expects the public rules to be available at `agent-rules/rules` via the `agent-rules/` submodule.
+
+Initialize submodules and compose the rules:
+
+```sh
+git submodule update --init --recursive
+npm install
+npm run compose
+```
+
+The default ruleset for this repository is `agent-ruleset.json` and currently composes the `node` domain into `AGENTS.md`.
+
 ## Compose
 
 From each project root, run:

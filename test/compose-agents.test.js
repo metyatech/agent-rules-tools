@@ -13,6 +13,41 @@ const writeFile = (filePath, content) => {
   fs.writeFileSync(filePath, content, "utf8");
 };
 
+const normalizeTrailingWhitespace = (content) => content.replace(/\s+$/u, "");
+const normalizePath = (filePath) => filePath.replace(/\\/g, "/");
+
+const collectMarkdownFiles = (rootDir) => {
+  const results = [];
+  const pending = [rootDir];
+
+  while (pending.length > 0) {
+    const currentDir = pending.pop();
+    if (!currentDir) {
+      continue;
+    }
+
+    const entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    for (const entry of entries) {
+      const entryPath = path.join(currentDir, entry.name);
+
+      if (entry.isDirectory()) {
+        pending.push(entryPath);
+        continue;
+      }
+
+      if (entry.isFile() && path.extname(entry.name).toLowerCase() === ".md") {
+        results.push(entryPath);
+      }
+    }
+  }
+
+  return results.sort((a, b) => {
+    const relA = normalizePath(path.relative(rootDir, a));
+    const relB = normalizePath(path.relative(rootDir, b));
+    return relA.localeCompare(relB);
+  });
+};
+
 const runCli = (args, options) =>
   execFileSync(process.execPath, [cliPath, ...args], {
     cwd: options.cwd,
@@ -102,6 +137,48 @@ test("supports AGENT_RULES_ROOT environment override", () => {
 
     const output = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
     assert.equal(output, "<!-- markdownlint-disable MD025 -->\n# Only Global\n1\n");
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("composes using default agent-rules submodule layout", () => {
+  const submoduleRulesRoot = path.join(repoRoot, "agent-rules", "rules");
+  if (!fs.existsSync(submoduleRulesRoot)) {
+    throw new Error("agent-rules submodule is required for this test");
+  }
+
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
+
+  try {
+    const projectRoot = path.join(tempRoot, "project");
+    const projectRulesRoot = path.join(projectRoot, "agent-rules", "rules");
+
+    fs.mkdirSync(projectRoot, { recursive: true });
+    fs.cpSync(submoduleRulesRoot, projectRulesRoot, { recursive: true });
+
+    writeFile(
+      path.join(projectRoot, "agent-ruleset.json"),
+      JSON.stringify(
+        {
+          output: "AGENTS.md",
+          domains: ["node"]
+        },
+        null,
+        2
+      )
+    );
+
+    runCli(["--root", projectRoot], { cwd: repoRoot });
+
+    const outputPath = path.join(projectRoot, "AGENTS.md");
+    const output = fs.readFileSync(outputPath, "utf8");
+    assert.match(output, /^<!-- markdownlint-disable MD025 -->\n/u);
+
+    const globalFiles = collectMarkdownFiles(path.join(projectRulesRoot, "global"));
+    const firstGlobal = normalizeTrailingWhitespace(fs.readFileSync(globalFiles[0], "utf8"));
+    assert.ok(firstGlobal.length > 0);
+    assert.match(output, new RegExp(firstGlobal.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&"), "u"));
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
