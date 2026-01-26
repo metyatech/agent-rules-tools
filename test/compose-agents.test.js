@@ -35,8 +35,6 @@ const runCli = (args, options) =>
 const withToolRules = (body) =>
   `<!-- markdownlint-disable MD025 -->\n${TOOL_RULES}\n\n${body}`;
 
-const escapeRegExp = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-
 
 
 test("composes AGENTS.md using local source and extra rules", () => {
@@ -208,42 +206,6 @@ test("clears cached rules with --clear-cache", () => {
 
     assert.match(stdout, /Cache cleared\./u);
     assert.equal(fs.existsSync(path.join(fakeHome, ".agentsmd")), false);
-  } finally {
-    fs.rmSync(tempRoot, { recursive: true, force: true });
-  }
-});
-
-test("composes using the repository submodule as a local source", () => {
-  const submoduleRoot = path.join(repoRoot, "agent-rules");
-  if (!fs.existsSync(submoduleRoot)) {
-    throw new Error("agent-rules submodule is required for this test");
-  }
-
-  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
-
-  try {
-    const projectRoot = path.join(tempRoot, "project");
-    fs.mkdirSync(projectRoot, { recursive: true });
-
-    writeFile(
-      path.join(projectRoot, "agent-ruleset.json"),
-      JSON.stringify(
-        {
-          source: submoduleRoot,
-          output: "AGENTS.md",
-          domains: ["node"]
-        },
-        null,
-        2
-      )
-    );
-
-    runCli(["--root", projectRoot], { cwd: repoRoot });
-
-    const outputPath = path.join(projectRoot, "AGENTS.md");
-    const output = fs.readFileSync(outputPath, "utf8");
-    assert.match(output, /^<!-- markdownlint-disable MD025 -->\n/u);
-    assert.match(output, new RegExp(escapeRegExp(TOOL_RULES), "u"));
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

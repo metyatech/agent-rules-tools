@@ -197,6 +197,7 @@ Write final responses to the user in Japanese unless the user requests otherwise
 
 - 失敗を握りつぶさない（空の catch / 黙殺 / サイレントフォールバックを避ける）。
 - 回復可能なら早期 return + 明示的なエラー通知、回復不能なら明確に停止/失敗させる。
+- エラーメッセージは実際の原因を簡潔に示し、必要な場合は対象の入力名と値（例: パス）を含める。
 
 ## 設定検証
 

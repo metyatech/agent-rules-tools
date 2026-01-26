@@ -6,10 +6,7 @@ This repository contains CLI tooling for composing per-project `AGENTS.md` files
 
 See `CHANGELOG.md` for release notes.
 
-It is intended to be used together with shared rule modules such as:
-
-- `agent-rules/` (public rule modules)
-- `agent-rules-private/` (optional, private-only rule modules)
+It is intended to be used together with shared rule modules such as the public `agent-rules` repository.
 
 ## Install (global CLI)
 
@@ -23,17 +20,7 @@ This provides the `compose-agentsmd` command.
 
 ## Rules setup (this repository)
 
-This repository expects the public rules to be available at `agent-rules/rules` via the `agent-rules/` submodule.
-
-Initialize submodules and compose the rules:
-
-```sh
-git submodule update --init --recursive
-npm install
-npm run compose
-```
-
-The default ruleset for this repository is `agent-ruleset.json` and currently composes the `node` domain into `AGENTS.md`.
+The default ruleset for this repository is `agent-ruleset.json` and currently composes the `node` domain into `AGENTS.md` from the shared GitHub source.
 
 ## Compose
 
