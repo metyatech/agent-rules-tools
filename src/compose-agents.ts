@@ -8,7 +8,8 @@ import { Ajv, type ErrorObject } from "ajv";
 
 const DEFAULT_RULESET_NAME = "agent-ruleset.json";
 const DEFAULT_OUTPUT = "AGENTS.md";
-const DEFAULT_CACHE_ROOT = path.join(os.homedir(), ".agentsmd");
+const DEFAULT_CACHE_ROOT = path.join(os.homedir(), ".agentsmd", "cache");
+const DEFAULT_WORKSPACE_ROOT = path.join(os.homedir(), ".agentsmd", "workspace");
 const RULESET_SCHEMA_PATH = new URL("../agent-ruleset.schema.json", import.meta.url);
 const TOOL_RULES = [
   "# Tool Rules (compose-agentsmd)",
@@ -40,9 +41,10 @@ type CliArgs = {
   rulesetName?: string;
   refresh?: boolean;
   clearCache?: boolean;
+  command?: "compose" | "edit-rules" | "apply-rules";
 };
 
-const usage = `Usage: compose-agentsmd [--root <path>] [--ruleset <path>] [--ruleset-name <name>] [--refresh] [--clear-cache]
+const usage = `Usage: compose-agentsmd [edit-rules|apply-rules] [--root <path>] [--ruleset <path>] [--ruleset-name <name>] [--refresh] [--clear-cache]
 
 Options:
   --root <path>         Project root directory (default: current working directory)
@@ -54,9 +56,15 @@ Options:
 
 const parseArgs = (argv: string[]): CliArgs => {
   const args: CliArgs = {};
+  const knownCommands = new Set(["edit-rules", "apply-rules"]);
+  const remaining = [...argv];
 
-  for (let i = 0; i < argv.length; i += 1) {
-    const arg = argv[i];
+  if (remaining.length > 0 && knownCommands.has(remaining[0])) {
+    args.command = remaining.shift() as "edit-rules" | "apply-rules";
+  }
+
+  for (let i = 0; i < remaining.length; i += 1) {
+    const arg = remaining[i];
 
     if (arg === "--help" || arg === "-h") {
       args.help = true;
@@ -64,7 +72,7 @@ const parseArgs = (argv: string[]): CliArgs => {
     }
 
     if (arg === "--root") {
-      const value = argv[i + 1];
+      const value = remaining[i + 1];
       if (!value) {
         throw new Error("Missing value for --root");
       }
@@ -74,7 +82,7 @@ const parseArgs = (argv: string[]): CliArgs => {
     }
 
     if (arg === "--ruleset") {
-      const value = argv[i + 1];
+      const value = remaining[i + 1];
       if (!value) {
         throw new Error("Missing value for --ruleset");
       }
@@ -84,7 +92,7 @@ const parseArgs = (argv: string[]): CliArgs => {
     }
 
     if (arg === "--ruleset-name") {
-      const value = argv[i + 1];
+      const value = remaining[i + 1];
       if (!value) {
         throw new Error("Missing value for --ruleset-name");
       }
@@ -137,6 +145,10 @@ const resolveFrom = (baseDir: string, targetPath: string): string => {
   }
 
   return path.resolve(baseDir, targetPath);
+};
+
+const ensureDir = (dirPath: string): void => {
+  fs.mkdirSync(dirPath, { recursive: true });
 };
 
 const clearCache = (): void => {
@@ -354,10 +366,6 @@ const resolveRefHash = (repoUrl: string, ref: string): string | null => {
   return hash ?? null;
 };
 
-const ensureDir = (dirPath: string): void => {
-  fs.mkdirSync(dirPath, { recursive: true });
-};
-
 const cloneAtRef = (repoUrl: string, ref: string, destination: string): void => {
   execGit(["clone", "--depth", "1", "--branch", ref, repoUrl, destination]);
 };
@@ -425,6 +433,51 @@ const resolveLocalRulesRoot = (rulesetDir: string, source: string): string => {
   const candidate = path.basename(resolvedSource) === "rules" ? resolvedSource : path.join(resolvedSource, "rules");
   ensureDirectoryExists(candidate);
   return candidate;
+};
+
+const resolveWorkspaceRoot = (rulesetDir: string, source: string): string => {
+  if (source.startsWith("github:")) {
+    const parsed = parseGithubSource(source);
+    return path.join(DEFAULT_WORKSPACE_ROOT, parsed.owner, parsed.repo);
+  }
+
+  return resolveFrom(rulesetDir, source);
+};
+
+const ensureWorkspaceForGithubSource = (source: string): string => {
+  const parsed = parseGithubSource(source);
+  const workspaceRoot = path.join(DEFAULT_WORKSPACE_ROOT, parsed.owner, parsed.repo);
+
+  if (!fs.existsSync(workspaceRoot)) {
+    ensureDir(path.dirname(workspaceRoot));
+    execGit(["clone", parsed.url, workspaceRoot]);
+  }
+
+  if (parsed.ref !== "latest") {
+    execGit(["fetch", "--all"], workspaceRoot);
+    execGit(["checkout", parsed.ref], workspaceRoot);
+  }
+
+  return workspaceRoot;
+};
+
+const applyRulesFromWorkspace = (rulesetDir: string, source: string): void => {
+  if (!source.startsWith("github:")) {
+    return;
+  }
+
+  const workspaceRoot = ensureWorkspaceForGithubSource(source);
+  const status = execGit(["status", "--porcelain"], workspaceRoot);
+  if (status) {
+    throw new Error(`Workspace has uncommitted changes: ${workspaceRoot}`);
+  }
+
+  const branch = execGit(["rev-parse", "--abbrev-ref", "HEAD"], workspaceRoot);
+  if (branch === "HEAD") {
+    throw new Error(`Workspace is in detached HEAD state: ${workspaceRoot}`);
+  }
+
+  execGit(["push"], workspaceRoot);
 };
 
 const resolveRulesRoot = (
@@ -522,6 +575,19 @@ const getRulesetFiles = (rootDir: string, specificRuleset: string | undefined, r
   return findRulesetFiles(rootDir, rulesetName);
 };
 
+const ensureSingleRuleset = (rulesetFiles: string[], rootDir: string, rulesetName: string): string => {
+  if (rulesetFiles.length === 0) {
+    throw new Error(`No ruleset files named ${rulesetName} found under ${rootDir}`);
+  }
+
+  if (rulesetFiles.length > 1) {
+    const list = rulesetFiles.map((file) => `- ${normalizePath(path.relative(rootDir, file))}`).join("\n");
+    throw new Error(`Multiple ruleset files found. Specify one with --ruleset:\n${list}`);
+  }
+
+  return rulesetFiles[0];
+};
+
 const main = (): void => {
   const args = parseArgs(process.argv.slice(2));
 
@@ -539,6 +605,32 @@ const main = (): void => {
   const rootDir = args.root ? path.resolve(args.root) : process.cwd();
   const rulesetName = args.rulesetName || DEFAULT_RULESET_NAME;
   const rulesetFiles = getRulesetFiles(rootDir, args.ruleset, rulesetName);
+  const command = args.command ?? "compose";
+
+  if (command === "edit-rules") {
+    const rulesetPath = ensureSingleRuleset(rulesetFiles, rootDir, rulesetName);
+    const rulesetDir = path.dirname(rulesetPath);
+    const ruleset = readProjectRuleset(rulesetPath);
+
+    let workspaceRoot = resolveWorkspaceRoot(rulesetDir, ruleset.source);
+    if (ruleset.source.startsWith("github:")) {
+      workspaceRoot = ensureWorkspaceForGithubSource(ruleset.source);
+    }
+
+    process.stdout.write(`Rules workspace: ${workspaceRoot}\n`);
+    return;
+  }
+
+  if (command === "apply-rules") {
+    const rulesetPath = ensureSingleRuleset(rulesetFiles, rootDir, rulesetName);
+    const rulesetDir = path.dirname(rulesetPath);
+    const ruleset = readProjectRuleset(rulesetPath);
+
+    applyRulesFromWorkspace(rulesetDir, ruleset.source);
+    const output = composeRuleset(rulesetPath, rootDir, { refresh: true });
+    process.stdout.write(`Composed AGENTS.md:\n- ${output}\n`);
+    return;
+  }
 
   if (rulesetFiles.length === 0) {
     throw new Error(`No ruleset files named ${rulesetName} found under ${rootDir}`);

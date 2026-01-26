@@ -195,7 +195,7 @@ test("clears cached rules with --clear-cache", () => {
 
   try {
     const fakeHome = path.join(tempRoot, "home");
-    const cacheRoot = path.join(fakeHome, ".agentsmd", "owner", "repo", "ref");
+    const cacheRoot = path.join(fakeHome, ".agentsmd", "cache", "owner", "repo", "ref");
     fs.mkdirSync(cacheRoot, { recursive: true });
     fs.writeFileSync(path.join(cacheRoot, "marker.txt"), "cache", "utf8");
 
@@ -205,7 +205,66 @@ test("clears cached rules with --clear-cache", () => {
     });
 
     assert.match(stdout, /Cache cleared\./u);
-    assert.equal(fs.existsSync(path.join(fakeHome, ".agentsmd")), false);
+    assert.equal(fs.existsSync(path.join(fakeHome, ".agentsmd", "cache")), false);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("edit-rules uses local source path as workspace", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
+
+  try {
+    const projectRoot = path.join(tempRoot, "project");
+    const sourceRoot = path.join(tempRoot, "rules-source");
+
+    writeFile(
+      path.join(projectRoot, "agent-ruleset.json"),
+      JSON.stringify(
+        {
+          source: path.relative(projectRoot, sourceRoot),
+          output: "AGENTS.md"
+        },
+        null,
+        2
+      )
+    );
+
+    fs.mkdirSync(path.join(sourceRoot, "rules", "global"), { recursive: true });
+
+    const stdout = runCli(["edit-rules", "--root", projectRoot], { cwd: repoRoot });
+    assert.match(stdout, new RegExp(`Rules workspace: ${sourceRoot.replace(/\\/g, "\\\\")}`, "u"));
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("apply-rules composes with refresh for local source", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
+
+  try {
+    const projectRoot = path.join(tempRoot, "project");
+    const sourceRoot = path.join(tempRoot, "rules-source");
+    const rulesRoot = path.join(sourceRoot, "rules");
+
+    writeFile(
+      path.join(projectRoot, "agent-ruleset.json"),
+      JSON.stringify(
+        {
+          source: path.relative(projectRoot, sourceRoot),
+          output: "AGENTS.md"
+        },
+        null,
+        2
+      )
+    );
+
+    writeFile(path.join(rulesRoot, "global", "only.md"), "# Only\n1");
+
+    runCli(["apply-rules", "--root", projectRoot], { cwd: repoRoot });
+
+    const output = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
+    assert.equal(output, withToolRules("# Only\n1\n"));
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

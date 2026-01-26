@@ -34,6 +34,23 @@ The tool searches for `agent-ruleset.json` under the given root directory (defau
 
 The tool prepends a small "Tool Rules" block to every generated `AGENTS.md` so agents know how to regenerate or update rules.
 
+## Updating shared rules
+
+For GitHub sources, the tool keeps two locations:
+
+- Cache: `~/.agentsmd/cache/<owner>/<repo>/<ref>/` (read-only, used for compose)
+- Workspace: `~/.agentsmd/workspace/<owner>/<repo>/` (editable)
+
+Update flow:
+
+```sh
+compose-agentsmd edit-rules
+# edit files under rules/ in the workspace
+compose-agentsmd apply-rules
+```
+
+`edit-rules` clones the GitHub source into the workspace (or reuses it). `apply-rules` pushes the workspace (if clean) and regenerates `AGENTS.md` by refreshing the cache. If your `source` is a local path, `edit-rules` will just print that path and `apply-rules` will skip the push.
+
 ## Project ruleset format
 
 ```json
@@ -59,7 +76,7 @@ Ruleset keys:
 
 ### Cache
 
-Remote sources are cached under `~/.agentsmd/<owner>/<repo>/<ref>/`. Use `--refresh` to re-fetch or `--clear-cache` to remove cached rules.
+Remote sources are cached under `~/.agentsmd/cache/<owner>/<repo>/<ref>/`. Use `--refresh` to re-fetch or `--clear-cache` to remove cached rules.
 
 ### Optional arguments
 
@@ -68,6 +85,8 @@ Remote sources are cached under `~/.agentsmd/<owner>/<repo>/<ref>/`. Use `--refr
 - `--ruleset-name <name>`: override the ruleset filename (default: `agent-ruleset.json`)
 - `--refresh`: refresh cached remote rules
 - `--clear-cache`: remove cached remote rules and exit
+- `edit-rules`: prepare or locate a writable rules workspace
+- `apply-rules`: push workspace changes (if GitHub source) and regenerate rules with refresh
 
 ## Development
 
