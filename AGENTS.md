@@ -67,7 +67,6 @@
 - GitHub Releases を作成し、本文は `CHANGELOG.md` の該当バージョンを基準に記述する。
 - バージョンは `package.json`（等の管理対象）と Git タグの間で不整合を起こさない。
 - When bumping a version, always create the GitHub Release and publish the package (e.g., npm) as part of the same update.
-- After publishing this repository, update the globally installed CLI to the latest version.
 
 ## 実装・技術選定
 
@@ -247,3 +246,7 @@ Write final responses to the user in Japanese unless the user requests otherwise
 
 - 配布物の想定がある場合は `npm pack --dry-run` で内容を確認する。
 - テストがある場合は `npm test` を実行する。
+
+# Distribution and release
+
+- After publishing this repository, update the globally installed CLI to the latest version.
