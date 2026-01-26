@@ -34,6 +34,24 @@ The tool reads `agent-ruleset.json` from the given root directory (default: curr
 
 The tool prepends a small "Tool Rules" block to every generated `AGENTS.md` so agents know how to regenerate or update rules.
 
+## Setup (init)
+
+For a project that does not have a ruleset yet, bootstrap one with `init`:
+
+```sh
+compose-agentsmd init --root path/to/project --yes
+```
+
+Defaults:
+
+- `source`: `github:owner/repo@latest`
+- `domains`: empty
+- `extra`: empty
+- `global`: omitted (defaults to `true`)
+- `output`: `AGENTS.md`
+
+Use `--dry-run` to preview actions, `--force` to overwrite existing files, and `--compose` to generate `AGENTS.md` immediately.
+
 ## Updating shared rules
 
 For GitHub sources, the tool keeps two locations:
@@ -53,11 +71,17 @@ compose-agentsmd apply-rules
 
 ## Project ruleset format
 
-```json
+Ruleset files accept JSON with `//` or `/* */` comments.
+
+```jsonc
 {
-  "source": "github:org/agent-rules@latest",
+  // Rules source. Use github:owner/repo@ref or a local path.
+  "source": "github:owner/repo@latest",
+  // Domain folders under rules/domains.
   "domains": ["node", "unreal"],
+  // Additional local rule files to append.
   "extra": ["agent-rules-local/custom.md"],
+  // Output file name.
   "output": "AGENTS.md"
 }
 ```
@@ -87,8 +111,20 @@ Remote sources are cached under `~/.agentsmd/cache/<owner>/<repo>/<ref>/`. Use `
 - `--clear-cache`: remove cached remote rules and exit
 - `--version` / `-V`: show version and exit
 - `--verbose` / `-v`: show verbose diagnostics
+- `--source <source>`: rules source for `init`
+- `--domains <list>`: comma-separated domains for `init`
+- `--extra <list>`: comma-separated extra rules for `init`
+- `--output <file>`: output filename for `init`
+- `--no-domains`: initialize with no domains
+- `--no-extra`: initialize without extra rule files
+- `--no-global`: initialize without global rules
+- `--compose`: compose `AGENTS.md` after `init`
+- `--dry-run`: show init plan without writing files
+- `--yes`: skip init confirmation prompt
+- `--force`: overwrite existing files during init
 - `edit-rules`: prepare or locate a writable rules workspace
 - `apply-rules`: push workspace changes (if GitHub source) and regenerate rules with refresh
+- `init`: generate a new ruleset and optional local rules file
 
 ## Development
 

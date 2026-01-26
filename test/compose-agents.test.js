@@ -19,6 +19,75 @@ const writeFile = (filePath, content) => {
 };
 
 const normalizeTrailingWhitespace = (content) => content.replace(/\s+$/u, "");
+const stripJsonComments = (input) => {
+  let output = "";
+  let inString = false;
+  let stringChar = "";
+  let escaping = false;
+  let inLineComment = false;
+  let inBlockComment = false;
+
+  for (let i = 0; i < input.length; i += 1) {
+    const char = input[i];
+    const next = input[i + 1];
+
+    if (inLineComment) {
+      if (char === "\n") {
+        inLineComment = false;
+        output += char;
+      }
+      continue;
+    }
+
+    if (inBlockComment) {
+      if (char === "*" && next === "/") {
+        inBlockComment = false;
+        i += 1;
+      }
+      continue;
+    }
+
+    if (inString) {
+      output += char;
+      if (escaping) {
+        escaping = false;
+        continue;
+      }
+      if (char === "\\") {
+        escaping = true;
+        continue;
+      }
+      if (char === stringChar) {
+        inString = false;
+        stringChar = "";
+      }
+      continue;
+    }
+
+    if (char === "/" && next === "/") {
+      inLineComment = true;
+      i += 1;
+      continue;
+    }
+
+    if (char === "/" && next === "*") {
+      inBlockComment = true;
+      i += 1;
+      continue;
+    }
+
+    if (char === "\"" || char === "'") {
+      inString = true;
+      stringChar = char;
+      output += char;
+      continue;
+    }
+
+    output += char;
+  }
+
+  return output;
+};
 const TOOL_RULES = normalizeTrailingWhitespace(
   fs.readFileSync(path.join(repoRoot, "tools", "tool-rules.md"), "utf8")
 );
@@ -226,6 +295,36 @@ test("supports source path pointing to a rules directory", () => {
   }
 });
 
+test("accepts rulesets with comments", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
+
+  try {
+    const projectRoot = path.join(tempRoot, "project");
+    const sourceRoot = path.join(tempRoot, "rules-source");
+    const rulesRoot = path.join(sourceRoot, "rules");
+    const sourceRelative = path.relative(projectRoot, sourceRoot).replace(/\\/g, "/");
+
+    writeFile(
+      path.join(projectRoot, "agent-ruleset.json"),
+      `{
+  // rules source
+  "source": "${sourceRelative}",
+  "output": "AGENTS.md"
+}
+`
+    );
+
+    writeFile(path.join(rulesRoot, "global", "only.md"), "# Only\n1");
+
+    runCli(["--root", projectRoot], { cwd: repoRoot });
+
+    const output = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
+    assert.equal(output, withToolRules("# Only\n1\n"));
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
 test("rejects invalid ruleset shapes with a clear error", () => {
   const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
 
@@ -330,6 +429,65 @@ test("apply-rules composes with refresh for local source", () => {
 
     const output = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
     assert.equal(output, withToolRules("# Only\n1\n"));
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("init creates a default ruleset with comments", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
+
+  try {
+    const projectRoot = path.join(tempRoot, "project");
+
+    const stdout = runCli(["init", "--yes", "--root", projectRoot], { cwd: repoRoot });
+    assert.match(stdout, /Initialized ruleset:/u);
+
+    const rulesetPath = path.join(projectRoot, "agent-ruleset.json");
+    const rulesetRaw = fs.readFileSync(rulesetPath, "utf8");
+    assert.match(rulesetRaw, /\/\/ Rules source/u);
+    assert.equal(/"global"\s*:/u.test(rulesetRaw), false);
+    const ruleset = JSON.parse(stripJsonComments(rulesetRaw));
+
+    assert.deepEqual(ruleset, {
+      source: "github:owner/repo@latest",
+      domains: [],
+      extra: [],
+      output: "AGENTS.md"
+    });
+
+    const localRulesPath = path.join(projectRoot, "agent-rules-local", "custom.md");
+    assert.equal(fs.existsSync(localRulesPath), false);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("init --dry-run does not write files", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
+
+  try {
+    const projectRoot = path.join(tempRoot, "project");
+
+    const stdout = runCli(["init", "--dry-run", "--root", projectRoot], { cwd: repoRoot });
+    assert.match(stdout, /Dry run/u);
+    assert.equal(fs.existsSync(path.join(projectRoot, "agent-ruleset.json")), false);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("init refuses to overwrite an existing ruleset without --force", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
+
+  try {
+    const projectRoot = path.join(tempRoot, "project");
+    writeFile(path.join(projectRoot, "agent-ruleset.json"), JSON.stringify({ source: "local" }, null, 2));
+
+    assert.throws(
+      () => runCli(["init", "--yes", "--root", projectRoot], { cwd: repoRoot }),
+      /Ruleset already exists/u
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }

@@ -1,11 +1,22 @@
-Usage: compose-agentsmd [edit-rules|apply-rules] [--root <path>] [--ruleset <path>] [--ruleset-name <name>] [--refresh] [--clear-cache] [--version|-V] [--verbose|-v] [--help|-h]
+Usage: compose-agentsmd [edit-rules|apply-rules|init] [--root <path>] [--ruleset <path>] [--ruleset-name <name>] [--source <source>] [--domains <list>] [--extra <list>] [--output <file>] [--no-domains] [--no-extra] [--no-global] [--compose] [--dry-run] [--yes] [--force] [--refresh] [--clear-cache] [--version|-V] [--verbose|-v] [--help|-h]
 
 Options:
   --help, -h           Show help and exit
   --version, -V        Show version and exit
   --verbose, -v        Show verbose diagnostics
-  --root <path>         Project root directory (default: current working directory)
-  --ruleset <path>      Only compose a single ruleset file
+  --root <path>        Project root directory (default: current working directory)
+  --ruleset <path>     Only compose a single ruleset file
   --ruleset-name <name> Ruleset filename in the project root (default: agent-ruleset.json)
-  --refresh             Refresh cached remote rules
-  --clear-cache         Remove cached remote rules and exit
+  --source <source>    Rules source for init (default: github:owner/repo@latest)
+  --domains <list>     Comma-separated domains for init (default: none)
+  --extra <list>       Comma-separated extra rules for init
+  --output <file>      Output filename for init (default: AGENTS.md)
+  --no-domains         Initialize with no domains
+  --no-extra           Initialize without extra rule files
+  --no-global          Initialize without global rules
+  --compose            Compose AGENTS.md after init
+  --dry-run            Show init plan without writing files
+  --yes                Skip init confirmation prompt
+  --force              Overwrite existing files during init
+  --refresh            Refresh cached remote rules
+  --clear-cache        Remove cached remote rules and exit

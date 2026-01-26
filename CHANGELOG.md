@@ -37,3 +37,8 @@ All notable changes to this project will be documented in this file.
 
 ## 3.1.0 - 2026-01-26
 - Added `--version`/`-V` and `--verbose`/`-v` flags with verbose diagnostics output.
+
+## 3.2.0 - 2026-01-26
+- Added `init` to bootstrap rulesets with dry-run, confirmation, and compose options.
+- Allowed ruleset files to include line/block comments (JSON with comments).
+- Updated init defaults to use generic GitHub sources and omit global/domains/extra unless specified.
