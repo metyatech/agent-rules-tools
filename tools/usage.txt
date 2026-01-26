@@ -1,6 +1,9 @@
-Usage: compose-agentsmd [edit-rules|apply-rules] [--root <path>] [--ruleset <path>] [--ruleset-name <name>] [--refresh] [--clear-cache]
+Usage: compose-agentsmd [edit-rules|apply-rules] [--root <path>] [--ruleset <path>] [--ruleset-name <name>] [--refresh] [--clear-cache] [--version|-V] [--verbose|-v] [--help|-h]
 
 Options:
+  --help, -h           Show help and exit
+  --version, -V        Show version and exit
+  --verbose, -v        Show verbose diagnostics
   --root <path>         Project root directory (default: current working directory)
   --ruleset <path>      Only compose a single ruleset file
   --ruleset-name <name> Ruleset filename in the project root (default: agent-ruleset.json)

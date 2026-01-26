@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 
 const repoRoot = path.resolve(__dirname, "..");
 const cliPath = path.join(repoRoot, "dist", "compose-agents.js");
+const packageJson = JSON.parse(fs.readFileSync(path.join(repoRoot, "package.json"), "utf8"));
 
 const writeFile = (filePath, content) => {
   fs.mkdirSync(path.dirname(filePath), { recursive: true });
@@ -32,6 +33,46 @@ const runCli = (args, options) =>
 
 const withToolRules = (body) =>
   `<!-- markdownlint-disable MD025 -->\n${TOOL_RULES}\n\n${body}`;
+
+test("prints version with --version and -V", () => {
+  const expected = `${packageJson.version}\n`;
+  const stdoutLong = runCli(["--version"], { cwd: repoRoot });
+  const stdoutShort = runCli(["-V"], { cwd: repoRoot });
+  assert.equal(stdoutLong, expected);
+  assert.equal(stdoutShort, expected);
+});
+
+test("prints verbose diagnostics with -v", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
+
+  try {
+    const projectRoot = path.join(tempRoot, "project");
+    const sourceRoot = path.join(tempRoot, "rules-source");
+    const rulesRoot = path.join(sourceRoot, "rules");
+
+    writeFile(
+      path.join(projectRoot, "agent-ruleset.json"),
+      JSON.stringify(
+        {
+          source: path.relative(projectRoot, sourceRoot),
+          global: true,
+          output: "AGENTS.md"
+        },
+        null,
+        2
+      )
+    );
+
+    writeFile(path.join(rulesRoot, "global", "only.md"), "# Only\n1");
+
+    const stdout = runCli(["-v", "--root", projectRoot], { cwd: repoRoot });
+    assert.match(stdout, /Verbose:/u);
+    assert.match(stdout, /Ruleset files:/u);
+    assert.match(stdout, /Composed AGENTS\.md:/u);
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
 
 
 

@@ -11,9 +11,12 @@ const DEFAULT_OUTPUT = "AGENTS.md";
 const DEFAULT_CACHE_ROOT = path.join(os.homedir(), ".agentsmd", "cache");
 const DEFAULT_WORKSPACE_ROOT = path.join(os.homedir(), ".agentsmd", "workspace");
 const RULESET_SCHEMA_PATH = new URL("../agent-ruleset.schema.json", import.meta.url);
+const PACKAGE_JSON_PATH = new URL("../package.json", import.meta.url);
 
 type CliArgs = {
   help?: boolean;
+  version?: boolean;
+  verbose?: boolean;
   root?: string;
   ruleset?: string;
   rulesetName?: string;
@@ -39,6 +42,16 @@ const parseArgs = (argv: string[]): CliArgs => {
 
     if (arg === "--help" || arg === "-h") {
       args.help = true;
+      continue;
+    }
+
+    if (arg === "--version" || arg === "-V") {
+      args.version = true;
+      continue;
+    }
+
+    if (arg === "--verbose" || arg === "-v") {
+      args.verbose = true;
       continue;
     }
 
@@ -94,6 +107,8 @@ const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim() !== "";
 
 const usage = normalizeTrailingWhitespace(fs.readFileSync(USAGE_PATH, "utf8"));
+const packageJson = JSON.parse(fs.readFileSync(PACKAGE_JSON_PATH, "utf8")) as { version?: string };
+const getVersion = (): string => packageJson.version ?? "unknown";
 
 const rulesetSchema = JSON.parse(fs.readFileSync(RULESET_SCHEMA_PATH, "utf8"));
 const TOOL_RULES = normalizeTrailingWhitespace(fs.readFileSync(TOOL_RULES_PATH, "utf8"));
@@ -533,6 +548,11 @@ const ensureSingleRuleset = (rulesetFiles: string[], rootDir: string, rulesetNam
 const main = (): void => {
   const args = parseArgs(process.argv.slice(2));
 
+  if (args.version) {
+    process.stdout.write(`${getVersion()}\n`);
+    return;
+  }
+
   if (args.help) {
     process.stdout.write(`${usage}\n`);
     return;
@@ -548,6 +568,18 @@ const main = (): void => {
   const rulesetName = args.rulesetName || DEFAULT_RULESET_NAME;
   const rulesetFiles = getRulesetFiles(rootDir, args.ruleset, rulesetName);
   const command = args.command ?? "compose";
+  const logVerbose = (message: string): void => {
+    if (args.verbose) {
+      process.stdout.write(`${message}\n`);
+    }
+  };
+
+  logVerbose("Verbose:");
+  logVerbose(`- Root: ${rootDir}`);
+  logVerbose(`- Ruleset name: ${rulesetName}`);
+  logVerbose(
+    `- Ruleset files:\n${rulesetFiles.map((file) => `  - ${normalizePath(path.relative(rootDir, file))}`).join("\n")}`
+  );
 
   if (command === "edit-rules") {
     const rulesetPath = ensureSingleRuleset(rulesetFiles, rootDir, rulesetName);

@@ -85,6 +85,8 @@ Remote sources are cached under `~/.agentsmd/cache/<owner>/<repo>/<ref>/`. Use `
 - `--ruleset-name <name>`: override the ruleset filename (default: `agent-ruleset.json`)
 - `--refresh`: refresh cached remote rules
 - `--clear-cache`: remove cached remote rules and exit
+- `--version` / `-V`: show version and exit
+- `--verbose` / `-v`: show verbose diagnostics
 - `edit-rules`: prepare or locate a writable rules workspace
 - `apply-rules`: push workspace changes (if GitHub source) and regenerate rules with refresh
 
