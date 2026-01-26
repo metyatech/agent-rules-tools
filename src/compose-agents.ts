@@ -11,12 +11,6 @@ const DEFAULT_OUTPUT = "AGENTS.md";
 const DEFAULT_CACHE_ROOT = path.join(os.homedir(), ".agentsmd", "cache");
 const DEFAULT_WORKSPACE_ROOT = path.join(os.homedir(), ".agentsmd", "workspace");
 const RULESET_SCHEMA_PATH = new URL("../agent-ruleset.schema.json", import.meta.url);
-const TOOL_RULES = [
-  "# Tool Rules (compose-agentsmd)",
-  "- Before starting any work, run `compose-agentsmd` from the project root.",
-  "- To update rules, update the source rule modules or ruleset, then rerun `compose-agentsmd`.",
-  "- Do not edit `AGENTS.md` directly; update the source rules and regenerate."
-].join("\n");
 
 const DEFAULT_IGNORE_DIRS = new Set([
   ".git",
@@ -44,15 +38,8 @@ type CliArgs = {
   command?: "compose" | "edit-rules" | "apply-rules";
 };
 
-const usage = `Usage: compose-agentsmd [edit-rules|apply-rules] [--root <path>] [--ruleset <path>] [--ruleset-name <name>] [--refresh] [--clear-cache]
-
-Options:
-  --root <path>         Project root directory (default: current working directory)
-  --ruleset <path>      Only compose a single ruleset file
-  --ruleset-name <name> Ruleset filename to search for (default: agent-ruleset.json)
-  --refresh             Refresh cached remote rules
-  --clear-cache         Remove cached remote rules and exit
-`;
+const TOOL_RULES_PATH = new URL("../tools/tool-rules.md", import.meta.url);
+const USAGE_PATH = new URL("../tools/usage.txt", import.meta.url);
 
 const parseArgs = (argv: string[]): CliArgs => {
   const args: CliArgs = {};
@@ -122,7 +109,10 @@ const normalizePath = (filePath: string): string => filePath.replace(/\\/g, "/")
 const isNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim() !== "";
 
+const usage = normalizeTrailingWhitespace(fs.readFileSync(USAGE_PATH, "utf8"));
+
 const rulesetSchema = JSON.parse(fs.readFileSync(RULESET_SCHEMA_PATH, "utf8"));
+const TOOL_RULES = normalizeTrailingWhitespace(fs.readFileSync(TOOL_RULES_PATH, "utf8"));
 const ajv = new Ajv({ allErrors: true, strict: false });
 const validateRulesetSchema = ajv.compile(rulesetSchema);
 

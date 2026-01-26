@@ -17,12 +17,10 @@ const writeFile = (filePath, content) => {
   fs.writeFileSync(filePath, content, "utf8");
 };
 
-const TOOL_RULES = [
-  "# Tool Rules (compose-agentsmd)",
-  "- Before starting any work, run `compose-agentsmd` from the project root.",
-  "- To update rules, update the source rule modules or ruleset, then rerun `compose-agentsmd`.",
-  "- Do not edit `AGENTS.md` directly; update the source rules and regenerate."
-].join("\n");
+const normalizeTrailingWhitespace = (content) => content.replace(/\s+$/u, "");
+const TOOL_RULES = normalizeTrailingWhitespace(
+  fs.readFileSync(path.join(repoRoot, "tools", "tool-rules.md"), "utf8")
+);
 
 const runCli = (args, options) =>
   execFileSync(process.execPath, [cliPath, ...args], {

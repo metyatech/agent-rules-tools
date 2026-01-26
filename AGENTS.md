@@ -1,7 +1,7 @@
 <!-- markdownlint-disable MD025 -->
 # Tool Rules (compose-agentsmd)
 - Before starting any work, run `compose-agentsmd` from the project root.
-- To update rules, update the source rule modules or ruleset, then rerun `compose-agentsmd`.
+- To update shared rules, run `compose-agentsmd edit-rules`, edit the workspace rules, then run `compose-agentsmd apply-rules`.
 - Do not edit `AGENTS.md` directly; update the source rules and regenerate.
 
 # AGENTS ルール運用（合成）
@@ -79,6 +79,7 @@
 - 不明点や判断が分かれる点は、独断で進めず確認する。
 - 推測だけで判断して進めない。根拠が不足している場合は確認する。
 - 原因・根拠を未確認のまま「可能性が高い」などの推測で実装・修正しない。まず事実確認し、確認できない場合はユーザーに確認する。
+- Externalize long embedded strings/templates/rules into separate files when possible to keep code readable and maintainable.
 
 ### 意思決定の優先順位
 

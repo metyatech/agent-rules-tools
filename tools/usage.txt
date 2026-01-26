@@ -1,0 +1,8 @@
+Usage: compose-agentsmd [edit-rules|apply-rules] [--root <path>] [--ruleset <path>] [--ruleset-name <name>] [--refresh] [--clear-cache]
+
+Options:
+  --root <path>         Project root directory (default: current working directory)
+  --ruleset <path>      Only compose a single ruleset file
+  --ruleset-name <name> Ruleset filename to search for (default: agent-ruleset.json)
+  --refresh             Refresh cached remote rules
+  --clear-cache         Remove cached remote rules and exit
