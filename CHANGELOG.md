@@ -31,3 +31,6 @@ All notable changes to this project will be documented in this file.
 ## 2.0.2 - 2026-01-26
 - Externalized tool-inserted rules and usage text into `tools/`.
 - Added rule guidance to externalize long embedded strings/templates when possible.
+
+## 3.0.0 - 2026-01-26
+- Removed recursive ruleset discovery; only the project root ruleset is composed unless `--ruleset` is provided.

@@ -12,22 +12,6 @@ const DEFAULT_CACHE_ROOT = path.join(os.homedir(), ".agentsmd", "cache");
 const DEFAULT_WORKSPACE_ROOT = path.join(os.homedir(), ".agentsmd", "workspace");
 const RULESET_SCHEMA_PATH = new URL("../agent-ruleset.schema.json", import.meta.url);
 
-const DEFAULT_IGNORE_DIRS = new Set([
-  ".git",
-  "agent-rules",
-  "agent-rules-private",
-  "agent-rules-local",
-  "agent-rules-tools",
-  "compose-agentsmd",
-  "node_modules",
-  "dist",
-  "build",
-  "out",
-  ".next",
-  ".turbo",
-  "coverage"
-]);
-
 type CliArgs = {
   help?: boolean;
   root?: string;
@@ -523,38 +507,6 @@ const composeRuleset = (rulesetPath: string, rootDir: string, options: ComposeOp
   return normalizePath(path.relative(rootDir, outputPath));
 };
 
-const findRulesetFiles = (rootDir: string, rulesetName: string): string[] => {
-  const results: string[] = [];
-  const pending = [rootDir];
-
-  while (pending.length > 0) {
-    const currentDir = pending.pop();
-    if (!currentDir) {
-      continue;
-    }
-
-    const entries = fs.readdirSync(currentDir, { withFileTypes: true });
-
-    for (const entry of entries) {
-      const entryPath = path.join(currentDir, entry.name);
-
-      if (entry.isDirectory()) {
-        if (DEFAULT_IGNORE_DIRS.has(entry.name)) {
-          continue;
-        }
-        pending.push(entryPath);
-        continue;
-      }
-
-      if (entry.isFile() && entry.name === rulesetName) {
-        results.push(entryPath);
-      }
-    }
-  }
-
-  return results;
-};
-
 const getRulesetFiles = (rootDir: string, specificRuleset: string | undefined, rulesetName: string): string[] => {
   if (specificRuleset) {
     const resolved = resolveFrom(rootDir, specificRuleset);
@@ -562,17 +514,17 @@ const getRulesetFiles = (rootDir: string, specificRuleset: string | undefined, r
     return [resolved];
   }
 
-  return findRulesetFiles(rootDir, rulesetName);
+  const defaultRuleset = path.join(rootDir, rulesetName);
+  if (!fs.existsSync(defaultRuleset)) {
+    return [];
+  }
+  return [defaultRuleset];
 };
 
 const ensureSingleRuleset = (rulesetFiles: string[], rootDir: string, rulesetName: string): string => {
   if (rulesetFiles.length === 0) {
-    throw new Error(`No ruleset files named ${rulesetName} found under ${rootDir}`);
-  }
-
-  if (rulesetFiles.length > 1) {
-    const list = rulesetFiles.map((file) => `- ${normalizePath(path.relative(rootDir, file))}`).join("\n");
-    throw new Error(`Multiple ruleset files found. Specify one with --ruleset:\n${list}`);
+    const expectedPath = normalizePath(path.join(rootDir, rulesetName));
+    throw new Error(`Missing ruleset file: ${expectedPath}`);
   }
 
   return rulesetFiles[0];
@@ -623,7 +575,8 @@ const main = (): void => {
   }
 
   if (rulesetFiles.length === 0) {
-    throw new Error(`No ruleset files named ${rulesetName} found under ${rootDir}`);
+    const expectedPath = normalizePath(path.join(rootDir, rulesetName));
+    throw new Error(`Missing ruleset file: ${expectedPath}`);
   }
 
   const outputs = rulesetFiles

@@ -30,7 +30,7 @@ From each project root, run:
 compose-agentsmd
 ```
 
-The tool searches for `agent-ruleset.json` under the given root directory (default: current working directory), and writes output files as specified by each ruleset. If `output` is omitted, it defaults to `AGENTS.md`.
+The tool reads `agent-ruleset.json` from the given root directory (default: current working directory), and writes the output file specified by the ruleset. If `output` is omitted, it defaults to `AGENTS.md`.
 
 The tool prepends a small "Tool Rules" block to every generated `AGENTS.md` so agents know how to regenerate or update rules.
 

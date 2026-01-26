@@ -86,7 +86,33 @@ test("fails fast when ruleset is missing", () => {
   try {
     assert.throws(
       () => runCli(["--root", tempRoot], { cwd: repoRoot }),
-      /No ruleset files named agent-ruleset\.json found/u
+      /Missing ruleset file: .*agent-ruleset\.json/u
+    );
+  } finally {
+    fs.rmSync(tempRoot, { recursive: true, force: true });
+  }
+});
+
+test("does not search for rulesets in subdirectories", () => {
+  const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), "compose-agentsmd-"));
+
+  try {
+    const nestedRoot = path.join(tempRoot, "nested");
+    writeFile(
+      path.join(nestedRoot, "agent-ruleset.json"),
+      JSON.stringify(
+        {
+          source: path.relative(nestedRoot, path.join(tempRoot, "rules-source")),
+          output: "AGENTS.md"
+        },
+        null,
+        2
+      )
+    );
+
+    assert.throws(
+      () => runCli(["--root", tempRoot], { cwd: repoRoot }),
+      /Missing ruleset file: .*agent-ruleset\.json/u
     );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
