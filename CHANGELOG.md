@@ -27,3 +27,7 @@ All notable changes to this project will be documented in this file.
 
 ## 2.0.1 - 2026-01-26
 - Moved the publish/global-update rule into local rules for this repository.
+
+## 2.0.2 - 2026-01-26
+- Externalized tool-inserted rules and usage text into `tools/`.
+- Added rule guidance to externalize long embedded strings/templates when possible.
