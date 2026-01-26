@@ -34,3 +34,6 @@ All notable changes to this project will be documented in this file.
 
 ## 3.0.0 - 2026-01-26
 - Removed recursive ruleset discovery; only the project root ruleset is composed unless `--ruleset` is provided.
+
+## 3.1.0 - 2026-01-26
+- Added `--version`/`-V` and `--verbose`/`-v` flags with verbose diagnostics output.
