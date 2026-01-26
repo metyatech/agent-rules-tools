@@ -35,6 +35,24 @@
 - 各プロジェクトのルートに `AGENTS.md` を置く。
 - サブツリーに別プロジェクトがある場合のみ、そのルートに `AGENTS.md` を置く（同一プロジェクト内で重複配置しない）。
 
+# CLI behavior standards
+
+- Provide `--help`/`-h` with clear usage, options, and examples.
+- Provide `--version` so automation can pin or verify installed versions.
+- When the CLI reads or writes data, support stdin/stdout piping and allow output to be redirected (e.g., `--output` when files are created).
+- Offer a machine-readable output mode (e.g., `--json`) when the CLI emits structured data.
+- For actions that modify or delete data, provide a safe preview (`--dry-run`) and an explicit confirmation bypass (`--yes`/`--force`).
+- Provide controllable logging (`--quiet`, `--verbose`, or `--trace`) so users can diagnose failures without changing code.
+- Use deterministic exit codes (0 success, non-zero failure) and avoid silent fallbacks.
+
+# CLI publication standards
+
+- Define a SemVer policy and document what counts as a breaking change.
+- Ensure release notes call out breaking changes and provide a migration path when needed.
+- Populate public package metadata (name, description, repository, issues, homepage, engines) for published CLIs.
+- Validate the executable entrypoint (`bin`) and any required shebangs so the CLI runs after install.
+- Run dependency security checks appropriate to the ecosystem before release and address critical issues.
+
 ## コマンド実行
 
 - ユーザーが明示しない限り、コマンドにラッパーやパイプを付加しない。
