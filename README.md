@@ -33,6 +33,7 @@ compose-agentsmd
 The tool reads `agent-ruleset.json` from the given root directory (default: current working directory), and writes the output file specified by the ruleset. If `output` is omitted, it defaults to `AGENTS.md`.
 
 The tool prepends a small "Tool Rules" block to every generated `AGENTS.md` so agents know how to regenerate or update rules.
+Each composed rule section is also prefixed with the source file path that produced it.
 
 ## Setup (init)
 

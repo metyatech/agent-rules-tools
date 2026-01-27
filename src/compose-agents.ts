@@ -687,9 +687,10 @@ const composeRuleset = (rulesetPath: string, rootDir: string, options: ComposeOp
   const directRulePaths = extraRules.map((rulePath) => resolveFrom(rulesetDir, rulePath));
   addRulePaths(directRulePaths, resolvedRules, seenRules);
 
-  const parts = resolvedRules.map((rulePath) =>
-    normalizeTrailingWhitespace(fs.readFileSync(rulePath, "utf8"))
-  );
+  const parts = resolvedRules.map((rulePath) => {
+    const body = normalizeTrailingWhitespace(fs.readFileSync(rulePath, "utf8"));
+    return `Source: ${normalizePath(rulePath)}\n\n${body}`;
+  });
 
   const lintHeader = "<!-- markdownlint-disable MD025 -->";
   const toolRules = normalizeTrailingWhitespace(TOOL_RULES);

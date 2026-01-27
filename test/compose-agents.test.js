@@ -19,6 +19,7 @@ const writeFile = (filePath, content) => {
 };
 
 const normalizeTrailingWhitespace = (content) => content.replace(/\s+$/u, "");
+const normalizePath = (value) => value.replace(/\\/g, "/");
 const stripJsonComments = (input) => {
   let output = "";
   let inString = false;
@@ -100,8 +101,9 @@ const runCli = (args, options) =>
     stdio: "pipe"
   });
 
-const withToolRules = (body) =>
-  `<!-- markdownlint-disable MD025 -->\n${TOOL_RULES}\n\n${body}`;
+const formatRuleBlock = (rulePath, body) => `Source: ${normalizePath(rulePath)}\n\n${body}`;
+
+const withToolRules = (body) => `<!-- markdownlint-disable MD025 -->\n${TOOL_RULES}\n\n${body}`;
 
 test("prints version with --version and -V", () => {
   const expected = `${packageJson.version}\n`;
@@ -181,7 +183,12 @@ test("composes AGENTS.md using local source and extra rules", () => {
     const output = fs.readFileSync(outputPath, "utf8");
 
     const expected = withToolRules(
-      "# Global A\nA\n\n# Global B\nB\n\n# Domain C\nC\n\n# Custom\nlocal\n"
+      [
+        formatRuleBlock(path.join(rulesRoot, "global", "a.md"), "# Global A\nA"),
+        formatRuleBlock(path.join(rulesRoot, "global", "b.md"), "# Global B\nB"),
+        formatRuleBlock(path.join(rulesRoot, "domains", "node", "c.md"), "# Domain C\nC"),
+        formatRuleBlock(path.join(projectRoot, "agent-rules-local", "custom.md"), "# Custom\nlocal")
+      ].join("\n\n") + "\n"
     );
 
     assert.equal(output, expected);
@@ -257,7 +264,10 @@ test("supports global=false to skip global rules", () => {
     runCli(["--root", projectRoot], { cwd: repoRoot });
 
     const output = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
-    assert.equal(output, withToolRules("# Domain\nD\n"));
+    assert.equal(
+      output,
+      withToolRules(formatRuleBlock(path.join(rulesRoot, "domains", "node", "domain.md"), "# Domain\nD") + "\n")
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -289,7 +299,10 @@ test("supports source path pointing to a rules directory", () => {
     runCli(["--root", projectRoot], { cwd: repoRoot });
 
     const output = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
-    assert.equal(output, withToolRules("# Ruleset Root\nruleset\n"));
+    assert.equal(
+      output,
+      withToolRules(formatRuleBlock(path.join(rulesRoot, "global", "only.md"), "# Ruleset Root\nruleset") + "\n")
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -319,7 +332,10 @@ test("accepts rulesets with comments", () => {
     runCli(["--root", projectRoot], { cwd: repoRoot });
 
     const output = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
-    assert.equal(output, withToolRules("# Only\n1\n"));
+    assert.equal(
+      output,
+      withToolRules(formatRuleBlock(path.join(rulesRoot, "global", "only.md"), "# Only\n1") + "\n")
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
@@ -428,7 +444,10 @@ test("apply-rules composes with refresh for local source", () => {
     runCli(["apply-rules", "--root", projectRoot], { cwd: repoRoot });
 
     const output = fs.readFileSync(path.join(projectRoot, "AGENTS.md"), "utf8");
-    assert.equal(output, withToolRules("# Only\n1\n"));
+    assert.equal(
+      output,
+      withToolRules(formatRuleBlock(path.join(rulesRoot, "global", "only.md"), "# Only\n1") + "\n")
+    );
   } finally {
     fs.rmSync(tempRoot, { recursive: true, force: true });
   }
